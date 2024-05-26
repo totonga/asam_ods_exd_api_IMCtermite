@@ -2,7 +2,8 @@
 import os
 from pathlib import Path
 import threading
-from urllib.parse import urlparse
+from urllib.parse import urlparse, unquote
+from urllib.request import url2pathname
 
 import grpc
 import ods_pb2 as ods
@@ -41,7 +42,7 @@ class ExternalDataReader(ods_external_data_pb2_grpc.ExternalDataReader):
         rv = exd_api.StructureResult(identifier=identifier)
         rv.name = Path(identifier.url).name
 
-        for group_index, channel in enumerate(channels) :
+        for group_index, channel in enumerate(channels):
 
             new_group = exd_api.StructureResult.Group()
             new_group.name = channel["name"]
@@ -119,7 +120,6 @@ class ExternalDataReader(ods_external_data_pb2_grpc.ExternalDataReader):
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
-    
 
     def __init__(self):
         self.connect_count = 0
@@ -133,9 +133,15 @@ class ExternalDataReader(ods_external_data_pb2_grpc.ExternalDataReader):
         self.connection_map[rv] = identifier
         return rv
 
+    def __uri_to_path(self, uri):
+        parsed = urlparse(uri)
+        host = "{0}{0}{mnt}{0}".format(os.path.sep, mnt=parsed.netloc)
+        return os.path.normpath(
+            os.path.join(host, url2pathname(unquote(parsed.path)))
+        )
+
     def __get_path(self, file_url):
-        p = urlparse(file_url)
-        final_path = os.path.abspath(os.path.join(p.netloc, p.path))
+        final_path = self.__uri_to_path(file_url)
         return final_path
 
     def __open_file(self, identifier):
@@ -145,9 +151,9 @@ class ExternalDataReader(ods_external_data_pb2_grpc.ExternalDataReader):
             connection_url = self.__get_path(identifier.url)
             if connection_url not in self.file_map:
                 file_handle = IMCtermite.imctermite(str(connection_url).encode('utf-8'))
-                channels = file_handle.get_channels(True) # we need true to determine length
+                channels = file_handle.get_channels(True)  # we need true to determine length
 
-                self.file_map[connection_url] = { "file" : channels, "ref_count" : 0 }
+                self.file_map[connection_url] = {"file": channels, "ref_count": 0}
             self.file_map[connection_url]["ref_count"] = self.file_map[connection_url]["ref_count"] + 1
             return connection_id
 
@@ -163,5 +169,5 @@ class ExternalDataReader(ods_external_data_pb2_grpc.ExternalDataReader):
             if self.file_map[connection_url]["ref_count"] > 1:
                 self.file_map[connection_url]["ref_count"] = self.file_map[connection_url]["ref_count"] - 1
             else:
-                #self.file_map[connection_url]["file"].close() # needs some cleanup?
+                # self.file_map[connection_url]["file"].close() # needs some cleanup?
                 del self.file_map[connection_url]
