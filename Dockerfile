@@ -1,8 +1,10 @@
 # GitHub: ghcr.io/<repository_owner>/asam-ods-exd-api-imc-termite:latest
 # docker build -t ghcr.io/totonga/asam-ods-exd-api-imc-termite:latest .
 # docker run --rm -it -v "$(pwd)/data":"$(pwd)/data" -p 50051:50051 ghcr.io/totonga/asam-ods-exd-api-imc-termite:latest
-
 FROM python:3.12.3-alpine
+LABEL org.opencontainers.image.source=https://github.com/totonga/asam_ods_exd_api_IMCtermite
+LABEL org.opencontainers.image.description="ASAM ODS External Data API implementation for IMCtermite (*.raw;*.dat)"
+LABEL org.opencontainers.image.licenses=MIT
 WORKDIR /app
 # needed for compiling IMCtermite library
 RUN apk add --update alpine-sdk
