@@ -38,7 +38,7 @@
             }
         }
     },
-    "postCreateCommand": "python -m pip install --upgrade pip && pip install coverage isort jupyterlab odsbox[exd-data] grpcio grpcio-tools IMCtermite",
+    "postCreateCommand": "python -m pip install --upgrade pip && pip install coverage isort jupyterlab odsbox[exd-data] grpcio grpcio-tools IMCtermite==2.0.16",
     "forwardPorts": [
         8888
     ],
