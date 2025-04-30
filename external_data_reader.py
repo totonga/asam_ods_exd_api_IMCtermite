@@ -1,4 +1,5 @@
 """EXD API implementation for termite raw/dat files"""
+import logging
 import os
 from pathlib import Path
 import threading
@@ -10,12 +11,13 @@ import ods_pb2 as ods
 import ods_external_data_pb2 as exd_api
 import ods_external_data_pb2_grpc
 
-import IMCtermite
+import imctermite
 
 
 class ExternalDataReader(ods_external_data_pb2_grpc.ExternalDataReader):
 
     def Open(self, request, context):
+        logging.info("Open: Called")
         file_path = Path(self.__get_path(request.url))
         if not file_path.is_file():
             raise Exception(f'file "{request.url}" not accessible')
@@ -26,10 +28,12 @@ class ExternalDataReader(ods_external_data_pb2_grpc.ExternalDataReader):
         return rv
 
     def Close(self, request, context):
+        logging.info("Close: Called")
         self.__close_file(request)
         return exd_api.Empty()
 
     def GetStructure(self, request, context):
+        logging.info("GetStructure: Called")
 
         if request.suppress_channels or request.suppress_attributes or 0 != len(request.channel_names):
             context.set_code(grpc.StatusCode.UNIMPLEMENTED)
@@ -49,10 +53,14 @@ class ExternalDataReader(ods_external_data_pb2_grpc.ExternalDataReader):
             new_group.id = group_index
             new_group.total_number_of_channels = 2
             new_group.number_of_rows = len(channel["ydata"])
-            new_group.attributes.variables["comment"].string_array.values.append(channel["comment"])
-            new_group.attributes.variables["uuid"].string_array.values.append(channel["uuid"])
-            new_group.attributes.variables["description"].string_array.values.append(channel["description"])
-            new_group.attributes.variables["origin"].string_array.values.append(channel["origin"])
+            new_group.attributes.variables["comment"].string_array.values.append(
+                channel["comment"])
+            new_group.attributes.variables["uuid"].string_array.values.append(
+                channel["uuid"])
+            new_group.attributes.variables["description"].string_array.values.append(
+                channel["description"])
+            new_group.attributes.variables["origin"].string_array.values.append(
+                channel["origin"])
 
             new_channel = exd_api.StructureResult.Channel()
             new_channel.name = channel["xname"]
@@ -74,7 +82,7 @@ class ExternalDataReader(ods_external_data_pb2_grpc.ExternalDataReader):
         return rv
 
     def GetValues(self, request, context):
-
+        logging.info("GetValues: Called")
         channels = self.__get_file(request.handle)
 
         if request.group_id < 0 or request.group_id >= len(channels):
@@ -87,8 +95,10 @@ class ExternalDataReader(ods_external_data_pb2_grpc.ExternalDataReader):
         nr_of_rows = len(channel["ydata"])
         if request.start >= nr_of_rows:
             context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
-            context.set_details(f'Channel start index {request.start} out of range!')
-            raise NotImplementedError(f'Channel start index {request.start} out of range!')
+            context.set_details(
+                f'Channel start index {request.start} out of range!')
+            raise NotImplementedError(
+                f'Channel start index {request.start} out of range!')
 
         end_index = request.start + request.limit
         if end_index >= nr_of_rows:
@@ -110,7 +120,8 @@ class ExternalDataReader(ods_external_data_pb2_grpc.ExternalDataReader):
             new_channel_values = exd_api.ValuesResult.ChannelValues()
             new_channel_values.id = channel_id
             new_channel_values.values.data_type = ods.DataTypeEnum.DT_DOUBLE
-            new_channel_values.values.double_array.values[:] = data[request.start:end_index]
+            new_channel_values.values.double_array.values[:
+                                                          ] = data[request.start:end_index]
 
             rv.channels.append(new_channel_values)
 
@@ -150,10 +161,13 @@ class ExternalDataReader(ods_external_data_pb2_grpc.ExternalDataReader):
             connection_id = self.__get_id(identifier)
             connection_url = self.__get_path(identifier.url)
             if connection_url not in self.file_map:
-                file_handle = IMCtermite.imctermite(str(connection_url).encode('utf-8'))
-                channels = file_handle.get_channels(True)  # we need true to determine length
+                file_handle = imctermite.imctermite(
+                    str(connection_url).encode('utf-8'))
+                # we need true to determine length
+                channels = file_handle.get_channels(True)
 
-                self.file_map[connection_url] = {"file": channels, "ref_count": 0}
+                self.file_map[connection_url] = {
+                    "file": channels, "ref_count": 0}
             self.file_map[connection_url]["ref_count"] = self.file_map[connection_url]["ref_count"] + 1
             return connection_id
 

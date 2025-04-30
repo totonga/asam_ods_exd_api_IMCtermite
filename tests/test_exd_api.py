@@ -9,7 +9,7 @@ import pathlib
 import logging
 
 
-class TestImcTermiteExdApi(unittest.TestCase):
+class TestimctermiteExdApi(unittest.TestCase):
     log = logging.getLogger(__name__)
 
     def _get_example_file_path(self, file_name):

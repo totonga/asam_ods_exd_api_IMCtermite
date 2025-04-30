@@ -11,6 +11,7 @@ from external_data_reader import ExternalDataReader
 
 
 def serve():
+    logging.info("Starting server")
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     ods_external_data_pb2_grpc.add_ExternalDataReaderServicer_to_server(
         ExternalDataReader(), server)
@@ -20,5 +21,9 @@ def serve():
 
 
 if __name__ == '__main__':
-    logging.basicConfig()
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s.%(msecs)03d [%(levelname)s] %(name)s - %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
     serve()

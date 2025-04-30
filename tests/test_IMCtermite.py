@@ -1,4 +1,4 @@
-import IMCtermite
+import imctermite
 import unittest
 import json
 import pathlib
@@ -18,7 +18,7 @@ class TestStringMethods(unittest.TestCase):
         file_path = self.__get_example_file_path('exampleA.raw')
         self.assertTrue(os.path.isfile(file_path))
         print(str(file_path).encode('utf-8'))
-        file_handle = IMCtermite.imctermite(str(file_path).encode('utf-8'))
+        file_handle = imctermite.imctermite(str(file_path).encode('utf-8'))
         print(json.dumps(file_handle.get_channels(False), indent=2))
         # we need true to determine length
         channels = file_handle.get_channels(True)

@@ -1,3 +1,3 @@
 grpcio==1.63.0
 grpcio-tools==1.63.0
-IMCtermite==2.0.16
+IMCtermite==2.1.18
