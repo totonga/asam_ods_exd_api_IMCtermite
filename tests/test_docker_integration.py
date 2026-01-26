@@ -1,31 +1,37 @@
 import pathlib
-import ods_external_data_pb2_grpc as exd_grpc
-import ods_external_data_pb2 as oed
-import ods_pb2 as ods
-import grpc
-import unittest
-import time
-import subprocess
-import logging
-from google.protobuf.json_format import MessageToJson
 import socket
+import subprocess
+import time
+import unittest
+
+import grpc
+from ods_exd_api_box import exd_api, exd_grpc, ods
 
 
 class TestDockerContainer(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         # Docker-Image bauen
-        subprocess.run(
-            ["docker", "build", "-t", "asam-ods-exd-api-imc-termite", "."], check=True)
+        subprocess.run(["docker", "build", "-t", "asam-ods-exd-api-imc-termite", "."], check=True)
 
-        example_file_path = pathlib.Path.joinpath(pathlib.Path(
-            __file__).parent.resolve(), '..', 'data')
+        example_file_path = pathlib.Path.joinpath(pathlib.Path(__file__).parent.resolve(), "..", "data")
         data_folder = pathlib.Path(example_file_path).absolute().resolve()
         cp = subprocess.run(
-            ["docker", "run", "-d", "--rm", "--name", "test_container",
-             "-p", "50051:50051", "-v", f"{data_folder}:/data", "asam-ods-exd-api-imc-termite"],
+            [
+                "docker",
+                "run",
+                "-d",
+                "--rm",
+                "--name",
+                "test_container",
+                "-p",
+                "50051:50051",
+                "-v",
+                f"{data_folder}:/data",
+                "asam-ods-exd-api-imc-termite",
+            ],
             stdout=subprocess.PIPE,
-            check=True
+            check=True,
         )
         cls.container_id = cp.stdout.decode().strip()
         cls.__wait_for_port_ready()
@@ -58,24 +64,18 @@ class TestDockerContainer(unittest.TestCase):
         with grpc.insecure_channel("localhost:50051") as channel:
             service = exd_grpc.ExternalDataReaderStub(channel)
 
-            handle = service.Open(oed.Identifier(
-                url="/data/exampleA.raw",
-                parameters=""), None)
+            handle = service.Open(exd_api.Identifier(url="/data/exampleA.raw", parameters=""), None)
             try:
-                structure = service.GetStructure(
-                    oed.StructureRequest(handle=handle), None)
-                logging.info(MessageToJson(structure))
-                self.assertEqual(structure.name, 'exampleA.raw')
+                structure = service.GetStructure(exd_api.StructureRequest(handle=handle), None)
+                self.assertEqual(structure.name, "exampleA.raw")
                 self.assertEqual(len(structure.groups), 1)
                 self.assertEqual(structure.groups[0].number_of_rows, 1)
                 self.assertEqual(len(structure.groups[0].channels), 2)
                 self.assertEqual(structure.groups[0].id, 0)
                 self.assertEqual(structure.groups[0].channels[0].id, 0)
                 self.assertEqual(structure.groups[0].channels[1].id, 1)
-                self.assertEqual(
-                    structure.groups[0].channels[0].data_type, ods.DataTypeEnum.DT_DOUBLE)
-                self.assertEqual(
-                    structure.groups[0].channels[1].data_type, ods.DataTypeEnum.DT_DOUBLE)
+                self.assertEqual(structure.groups[0].channels[0].data_type, ods.DataTypeEnum.DT_DOUBLE)
+                self.assertEqual(structure.groups[0].channels[1].data_type, ods.DataTypeEnum.DT_DOUBLE)
             finally:
                 service.Close(handle, None)
 
@@ -83,30 +83,20 @@ class TestDockerContainer(unittest.TestCase):
         with grpc.insecure_channel("localhost:50051") as channel:
             service = exd_grpc.ExternalDataReaderStub(channel)
 
-            handle = service.Open(oed.Identifier(
-                url="/data/exampleA.raw",
-                parameters=""), None)
+            handle = service.Open(exd_api.Identifier(url="/data/exampleA.raw", parameters=""), None)
 
             try:
-                values = service.GetValues(oed.ValuesRequest(handle=handle,
-                                                             group_id=0,
-                                                             channel_ids=[
-                                                                 0, 1],
-                                                             start=0,
-                                                             limit=4), None)
+                values = service.GetValues(
+                    exd_api.ValuesRequest(handle=handle, group_id=0, channel_ids=[0, 1], start=0, limit=4), None
+                )
                 self.assertEqual(values.id, 0)
                 self.assertEqual(len(values.channels), 2)
                 self.assertEqual(values.channels[0].id, 0)
                 self.assertEqual(values.channels[1].id, 1)
-                logging.info(MessageToJson(values))
 
-                self.assertEqual(
-                    values.channels[0].values.data_type, ods.DataTypeEnum.DT_DOUBLE)
-                self.assertSequenceEqual(
-                    values.channels[0].values.double_array.values, [0.0])
-                self.assertEqual(
-                    values.channels[1].values.data_type, ods.DataTypeEnum.DT_DOUBLE)
-                self.assertSequenceEqual(
-                    values.channels[1].values.double_array.values, [-5.121809677944827e+58])
+                self.assertEqual(values.channels[0].values.data_type, ods.DataTypeEnum.DT_DOUBLE)
+                self.assertSequenceEqual(values.channels[0].values.double_array.values, [0.0])
+                self.assertEqual(values.channels[1].values.data_type, ods.DataTypeEnum.DT_DOUBLE)
+                self.assertSequenceEqual(values.channels[1].values.double_array.values, [-5.121809677944827e58])
             finally:
                 service.Close(handle, None)
