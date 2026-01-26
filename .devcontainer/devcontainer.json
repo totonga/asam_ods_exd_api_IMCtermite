@@ -1,8 +1,12 @@
 {
     "name": "Jupyter Dev Container",
-    "image": "mcr.microsoft.com/vscode/devcontainers/python:3.12",
+    "image": "mcr.microsoft.com/vscode/devcontainers/python:3.12-bookworm",
     "features": {
-        "docker-in-docker": "latest"
+        "docker-in-docker": {
+            "version": "latest",
+            "moby": true,
+            "dockerDashComposeVersion": "v1"
+        }
     },
     "customizations": {
         "vscode": {
@@ -38,7 +42,7 @@
             }
         }
     },
-    "postCreateCommand": "python -m pip install --upgrade pip && pip install coverage isort jupyterlab odsbox[exd-data] grpcio==1.63.0 grpcio-tools==1.63.0 IMCtermite==2.1.18",
+    "postCreateCommand": "python -m pip install --upgrade pip && pip install -e '.[dev]' && mypy --install-types --non-interactive",
     "forwardPorts": [
         8888
     ],
